@@ -1,0 +1,40 @@
+---
+version: "3"
+
+name: multi-queue-pub-sub
+services:
+  app:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ../app
+    environment:
+      - AWS_REGION=us-east-1
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/local-sqs-queue
+      - QUEUES=sqs
+    volumes:
+      - ../app:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      localstack:
+        condition: service_healthy
+    ports:
+      - 3001:3000
+
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
+    image: localstack/localstack
+    environment:
+      - SERVICES=sqs
+      - LS_LOG=warn
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    ports:
+      - 4566:4566
+      - 4510-4559:4510-4559
+    volumes:
+      - ./localstack-hooks/init.sh:/etc/localstack/init/ready.d/init.sh
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "awslocal", "sqs", "list-queues"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
