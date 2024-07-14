@@ -1,6 +1,3 @@
----
-version: "3"
-
 name: multi-queue-pub-sub
 services:
   app:
