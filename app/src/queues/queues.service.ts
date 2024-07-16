@@ -13,6 +13,7 @@ export class QueuesService {
 
     for (const queueType of queueTypes as QueueType[]) {
       const queueService = this.queueFactory.create(queueType);
+      queueService.subscribe();
       this.queueServices.push(queueService);
     }
   }
