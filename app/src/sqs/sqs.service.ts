@@ -36,6 +36,7 @@ export class SQSService implements QueueServiceInterface {
         const command = new ReceiveMessageCommand({
           QueueUrl: this.queueURL,
           MaxNumberOfMessages: 1,
+          WaitTimeSeconds: 20,
         });
 
         const response = await this.sqsClient.send(command);
