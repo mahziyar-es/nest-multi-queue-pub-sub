@@ -10,6 +10,7 @@ import { ChannelWrapper } from 'amqp-connection-manager';
 
 @Injectable()
 export class RabbitMQService implements QueueServiceInterface {
+  private queueName = process.env.RABBITMQ_QUEUE_NAME;
   constructor(
     @Inject('RabbitMQClient') private readonly rabbitMQClient: ChannelWrapper,
   ) {}
@@ -17,7 +18,7 @@ export class RabbitMQService implements QueueServiceInterface {
   async publish(message: string) {
     try {
       await this.rabbitMQClient.sendToQueue(
-        process.env.RABBITMQ_QUEUE_NAME,
+        this.queueName,
         Buffer.from(message),
       );
 
@@ -27,5 +28,13 @@ export class RabbitMQService implements QueueServiceInterface {
 
       throw new HttpException('Error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  async subscribe() {
+    this.rabbitMQClient.consume(this.queueName, (message) => {
+      if (message) {
+        Logger.log(`received message from RabbitMQ: ${message.content}`);
+      }
+    });
   }
 }
