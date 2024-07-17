@@ -2,22 +2,43 @@ import { QueueServiceInterface } from 'src/queues/interfaces/queue-service.inter
 import {
   HttpException,
   HttpStatus,
-  Inject,
   Injectable,
   Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ChannelWrapper } from 'amqp-connection-manager';
+import amqp from 'amqp-connection-manager';
+import { Channel } from 'amqplib';
 
 @Injectable()
-export class RabbitMQService implements QueueServiceInterface {
+export class RabbitMQService implements QueueServiceInterface, OnModuleInit {
   private queueName = process.env.RABBITMQ_QUEUE_NAME;
-  constructor(
-    @Inject('RabbitMQClient') private readonly rabbitMQClient: ChannelWrapper,
-  ) {}
+  private publisherChannel: ChannelWrapper;
+  private subscriberChannel: ChannelWrapper;
+
+  onModuleInit() {
+    const connection = amqp.connect([process.env.RABBITMQ_URL]);
+
+    this.subscriberChannel = connection.createChannel({
+      setup: async (channel: Channel) => {
+        return channel.assertQueue(this.queueName, {
+          durable: false,
+        });
+      },
+    });
+
+    this.publisherChannel = connection.createChannel({
+      setup: async (channel: Channel) => {
+        return channel.assertQueue(this.queueName, {
+          durable: false,
+        });
+      },
+    });
+  }
 
   async publish(message: string) {
     try {
-      await this.rabbitMQClient.sendToQueue(
+      await this.publisherChannel.sendToQueue(
         this.queueName,
         Buffer.from(message),
       );
@@ -31,10 +52,16 @@ export class RabbitMQService implements QueueServiceInterface {
   }
 
   async subscribe() {
-    this.rabbitMQClient.consume(this.queueName, (message) => {
-      if (message) {
-        Logger.log(`received message from RabbitMQ: ${message.content}`);
-      }
-    });
+    await this.subscriberChannel.consume(
+      this.queueName,
+      (message) => {
+        if (message) {
+          Logger.log(`received message from RabbitMQ: ${message.content}`);
+        }
+      },
+      {
+        noAck: true,
+      },
+    );
   }
 }
