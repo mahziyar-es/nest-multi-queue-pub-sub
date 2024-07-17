@@ -1,14 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { QueueServiceInterface } from './interfaces/queue-service.interface';
 import { PublishMessageDto } from './dto/publish-message.dto';
 import { QueueFactory } from './queue.factory';
 import { QueueType } from './types/queue.type';
 
 @Injectable()
-export class QueuesService {
+export class QueuesService implements OnModuleInit {
   private queueServices: QueueServiceInterface[] = [];
 
-  constructor(private readonly queueFactory: QueueFactory) {
+  constructor(private readonly queueFactory: QueueFactory) {}
+
+  onModuleInit() {
     const queueTypes = process.env.QUEUES?.split(',');
 
     for (const queueType of queueTypes as QueueType[]) {
